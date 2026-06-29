@@ -97,8 +97,8 @@ router.post('/', requireAuth, async (req, res) => {
     if (!item.name || typeof item.price !== 'number' || item.price < 0) {
       return res.status(400).json({ error: 'Invalid item: price must be a non-negative number' });
     }
-    if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > 100) {
-      return res.status(400).json({ error: 'Invalid item: qty must be a positive integer (max 100)' });
+    if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > 10000) {
+       return res.status(400).json({ error: 'Invalid item: qty must be a positive integer (max 10000)' });
     }
   }
 
