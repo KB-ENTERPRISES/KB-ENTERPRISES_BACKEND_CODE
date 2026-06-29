@@ -399,10 +399,20 @@ router.patch('/:id/payment-screenshot', ...requireRole('CREW', 'ADMIN'), async (
     );
 
     const o = rows[0];
+    // Notify user with receipt link
     if (o.user_id) {
       await client.query(
         `INSERT INTO notifications (user_id, message) VALUES ($1, $2)`,
-        [o.user_id, `Your order ${id} has been delivered! Thank you for ordering with KB ENTERPRISES.`]
+        [o.user_id, `RECEIPT:${id}:Your order ${id} has been delivered! Tap to view your receipt.`]
+      );
+    }
+
+    // Notify all admins with receipt link
+    const { rows: admins } = await client.query(`SELECT id FROM users WHERE role = 'ADMIN'`);
+    for (const admin of admins) {
+      await client.query(
+        `INSERT INTO notifications (user_id, message) VALUES ($1, $2)`,
+        [admin.id, `RECEIPT:${id}:Order ${id} completed by ${req.user.name}. Tap to view receipt.`]
       );
     }
 
@@ -447,7 +457,15 @@ router.patch('/:id/complete', ...requireRole('ADMIN'), async (req, res) => {
     if (o.user_id) {
       await client.query(
         `INSERT INTO notifications (user_id, message) VALUES ($1, $2)`,
-        [o.user_id, `Your order ${id} has been delivered! Thank you for ordering with KB ENTERPRISES.`]
+        [o.user_id, `RECEIPT:${id}:Your order ${id} has been delivered! Tap to view your receipt.`]
+      );
+    }
+
+    const { rows: admins } = await client.query(`SELECT id FROM users WHERE role = 'ADMIN'`);
+    for (const admin of admins) {
+      await client.query(
+        `INSERT INTO notifications (user_id, message) VALUES ($1, $2)`,
+        [admin.id, `RECEIPT:${id}:Order ${id} manually completed. Tap to view receipt.`]
       );
     }
 
