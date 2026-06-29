@@ -12,7 +12,7 @@ function todayIST() {
 async function generateOrderId(client) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }).replace(/-/g, '');
   const { rows } = await client.query(
-    `SELECT COUNT(*) AS cnt FROM orders WHERE id LIKE $1 FOR UPDATE`,
+    `SELECT COUNT(*) AS cnt FROM orders WHERE id LIKE $1`,
     [`ORD-${today}-%`]
   );
   const seq = String(parseInt(rows[0].cnt) + 1).padStart(4, '0');
