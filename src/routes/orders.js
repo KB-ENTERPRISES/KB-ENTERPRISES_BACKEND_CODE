@@ -12,7 +12,7 @@ function todayIST() {
 async function generateOrderId(client) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }).replace(/-/g, '');
   const { rows } = await client.query(
-    `SELECT COUNT(*) AS cnt FROM orders WHERE id LIKE $1 FOR UPDATE`,
+    `SELECT COUNT(*) AS cnt FROM orders WHERE id LIKE $1`,
     [`ORD-${today}-%`]
   );
   const seq = String(parseInt(rows[0].cnt) + 1).padStart(4, '0');
@@ -97,8 +97,8 @@ router.post('/', requireAuth, async (req, res) => {
     if (!item.name || typeof item.price !== 'number' || item.price < 0) {
       return res.status(400).json({ error: 'Invalid item: price must be a non-negative number' });
     }
-    if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > 100) {
-      return res.status(400).json({ error: 'Invalid item: qty must be a positive integer (max 100)' });
+    if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > 10000) {
+       return res.status(400).json({ error: 'Invalid item: qty must be a positive integer (max 10000)' });
     }
   }
 
@@ -399,10 +399,20 @@ router.patch('/:id/payment-screenshot', ...requireRole('CREW', 'ADMIN'), async (
     );
 
     const o = rows[0];
+    // Notify user with receipt link
     if (o.user_id) {
       await client.query(
         `INSERT INTO notifications (user_id, message) VALUES ($1, $2)`,
-        [o.user_id, `Your order ${id} has been delivered! Thank you for ordering with KB ENTERPRISES.`]
+        [o.user_id, `RECEIPT:${id}:Your order ${id} has been delivered! Tap to view your receipt.`]
+      );
+    }
+
+    // Notify all admins with receipt link
+    const { rows: admins } = await client.query(`SELECT id FROM users WHERE role = 'ADMIN'`);
+    for (const admin of admins) {
+      await client.query(
+        `INSERT INTO notifications (user_id, message) VALUES ($1, $2)`,
+        [admin.id, `RECEIPT:${id}:Order ${id} completed by ${req.user.name}. Tap to view receipt.`]
       );
     }
 
@@ -447,7 +457,15 @@ router.patch('/:id/complete', ...requireRole('ADMIN'), async (req, res) => {
     if (o.user_id) {
       await client.query(
         `INSERT INTO notifications (user_id, message) VALUES ($1, $2)`,
-        [o.user_id, `Your order ${id} has been delivered! Thank you for ordering with KB ENTERPRISES.`]
+        [o.user_id, `RECEIPT:${id}:Your order ${id} has been delivered! Tap to view your receipt.`]
+      );
+    }
+
+    const { rows: admins } = await client.query(`SELECT id FROM users WHERE role = 'ADMIN'`);
+    for (const admin of admins) {
+      await client.query(
+        `INSERT INTO notifications (user_id, message) VALUES ($1, $2)`,
+        [admin.id, `RECEIPT:${id}:Order ${id} manually completed. Tap to view receipt.`]
       );
     }
 
